@@ -46,6 +46,8 @@ Outfitter_cSGVOutfit = "Battleground: Sunnyglade Valley";
 Outfitter_cCityOutfit = "Around Town";
 Outfitter_cBossOutfit = "Boss Mobs";
 Outfitter_cTrashOutfit = "Trash Mobs";
+Outfitter_cCritterOutfit = "Critters";
+
 
 Outfitter_cMountSpeedFormat = "Increases speed by (%d+)%%."; -- For detecting when mounted
 
@@ -261,6 +263,7 @@ Outfitter_cSunnygladeValleyOutfitDescription = "This outfit will automatically b
 Outfitter_cCityOutfitDescription = "This outfit will automatically be worn whenever you're in a friendly major city";
 Outfitter_cBossOutfitDescription = "This outfit will automatically be worn whenever you target level 63+ mobs";
 Outfitter_cTrashOutfitDescription = "This outfit will automatically be worn whenever you target level <63 mobs";
+Outfitter_cCritterOutfitDescription = "This outfit will automatically be worn whenever you target a critter";
 
 Outfitter_cKeyBinding = "Key Binding";
 
