@@ -668,11 +668,13 @@ function Outfitter_OnLoad()
 	Outfitter_RegisterEvent(this, "PLAYER_ALIVE", Outfitter_PlayerAlive);
 	Outfitter_RegisterEvent(this, "PLAYER_UNGHOST", Outfitter_PlayerAlive);
 
-	Outfitter_RegisterEvent(this, "UNIT_INVENTORY_CHANGED", Outfitter_InventoryChanged);
+	AceEvent:RegisterBucketEvent("UNIT_INVENTORY_CHANGED", 0.5, function (args)
+		if args["player"] then Outfitter_InventoryChanged2() end
+	end);
 
 	-- For indicating which outfits are missing items
 
-	Outfitter_RegisterEvent(this, "BAG_UPDATE", Outfitter_BagUpdate);
+	AceEvent:RegisterBucketEvent("BAG_UPDATE", 0.3, Outfitter_BagUpdate);
 	Outfitter_RegisterEvent(this, "PLAYERBANKSLOTS_CHANGED", Outfitter_BankSlotsChanged);
 
 	-- For monitoring bank bags
