@@ -695,7 +695,6 @@ function Outfitter_OnLoad()
 
 	-- For boss/trash outfit
 	Outfitter_RegisterEvent(this, "PLAYER_TARGET_CHANGED", Outfitter_TargetChanged);
-	Outfitter_RegisterEvent(this, "BigWigs_Pulltimer", Outfitter_BigWigsPulltimer);
 
 	-- Tabs
 
@@ -1043,9 +1042,7 @@ function Outfitter_TargetChangedDelayedEvent()
 	end
 end
 
-function Outfitter_BigWigsPulltimer(pEvent, pDuration, pRequester)
-	Outfitter_SetSpecialOutfitEnabled("NonCombat", false);
-end
+
 
 function Outfitter_InventoryChanged(pEvent)
 	if arg1 ~= "player" then
