@@ -4055,15 +4055,17 @@ function Outfitter_SetSpecialOutfitEnabled(pSpecialID, pEnable)
 			or vOutfit.Disabled
 			or (pEnable and vOutfit.BGDisabled and Outfitter_InBattlegroundZone())
 			or (pEnable and vOutfit.InstDisabled and Outfitter_InInstanceZone()) then
-		return ;
+		return;
 	end
 
 	if pEnable then
-		-- Start monitoring health and mana if it's the dining outfit
 
+		-- Start monitoring health and mana if it's the dining outfit
+		-- If enabling the Dining outfit, disable NonCombat outfit
 		if pSpecialID == "Dining" then
 			Outfitter_ResumeEvent(OutfitterFrame, "UNIT_HEALTH");
 			Outfitter_ResumeEvent(OutfitterFrame, "UNIT_MANA");
+            Outfitter_SetSpecialOutfitEnabled("NonCombat", false);
 		end
 
 		--
