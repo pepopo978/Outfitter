@@ -4065,7 +4065,7 @@ function Outfitter_SetSpecialOutfitEnabled(pSpecialID, pEnable)
 		if pSpecialID == "Dining" then
 			Outfitter_ResumeEvent(OutfitterFrame, "UNIT_HEALTH");
 			Outfitter_ResumeEvent(OutfitterFrame, "UNIT_MANA");
-            Outfitter_SetSpecialOutfitEnabled("NonCombat", false);
+            --Outfitter_SetSpecialOutfitEnabled("NonCombat", false);
 		end
 
 		--
@@ -4080,6 +4080,8 @@ function Outfitter_SetSpecialOutfitEnabled(pSpecialID, pEnable)
 
 		if pSpecialID == "ArgentDawn" then
 			vWearBelowOutfit = Outfitter_GetSpecialOutfit("Riding");
+        elseif pSpecialID == "NonCombat" then
+            vWearBelowOutfit = Outfitter_GetSpecialOutfit("Dining");
 		end
 
 		--
