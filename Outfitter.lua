@@ -4425,6 +4425,7 @@ function Outfitter_Initialize()
 	-- Make sure the outfit state is good
 
 	Outfitter_SetSpecialOutfitEnabled("Riding", false);
+	Outfitter_SetSpecialOutfitEnabled("NonCombat", false);
 	Outfitter_SetSpecialOutfitEnabled("Spirit", false);
 	Outfitter_UpdateAuraStates();
 
