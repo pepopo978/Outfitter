@@ -1,5 +1,7 @@
 gOutfitter_Settings = nil;
 
+Outfitter_cTitleVersion = GetAddOnMetadata( "Outfitter", "Title" ) .. " " .. GetAddOnMetadata( "Outfitter", "Version" )
+
 local AceEvent = AceLibrary:HasInstance("AceEvent-2.0") and AceLibrary("AceEvent-2.0")
 
 local Outfitter_cInitializationEvent = "PLAYER_ENTERING_WORLD";
@@ -501,6 +503,7 @@ local Outfitter_cMinEquipmentUpdateInterval = 1.5;
 local gOutfitter_CurrentOutfit = nil;
 local gOutfitter_ExpectedOutfit = nil;
 local gOutfitter_CurrentInventoryOutfit = nil;
+local gOutfitter_CurrentProfessionOutfit = nil;
 local gOutfitter_EquippableItems = nil;
 
 local gOutfitter_Initialized = false;
@@ -609,6 +612,16 @@ local function Outfitter_CreateCurrentOutfitFrame()
 	frame:SetScript("OnDragStop", function()
 		frame:StopMovingOrSizing()
 	end)
+	frame:SetScript("OnMouseUp", function()
+		if arg1 == "RightButton" then
+			if not this.dropdown then
+				this.dropdown = CreateFrame("Frame", "OutfitterCurrentOutfitDropDown");			
+				OutfitterMinimapDropDown_OnLoad( this.dropdown );			
+				this.dropdown.ChangedValueFunc = OutfitterMinimapButton_ItemSelected;
+			end
+			ToggleDropDownMenu(nil, nil, this.dropdown, this:GetName(), 2, 2);
+		end
+	end)
 	frame:Hide()
 
 	return frame
@@ -693,6 +706,10 @@ function Outfitter_OnLoad()
 	-- For boss/trash outfit
 	Outfitter_RegisterEvent(this, "PLAYER_TARGET_CHANGED", Outfitter_TargetChanged);
 
+	-- For auto-equip/unequip of profession outfits
+	Outfitter_RegisterEvent(this, "UI_ERROR_MESSAGE", Outfitter_ProfessionCheck);
+	Outfitter_RegisterEvent(this, "LOOT_CLOSED", Outfitter_ProfessionUnequip);
+
 	-- Tabs
 
 	PanelTemplates_SetNumTabs(this, table.getn(gOutfitter_PanelFrames));
@@ -764,6 +781,7 @@ function Outfitter_PlayerEnteringWorld()
 	Outfitter_RegenEnabled();
 	Outfitter_UpdateAuraStates();
 	Outfitter_SetSpecialOutfitEnabled("Riding", false);
+	Outfitter_pfUISkin()
 
 	Outfitter_ResumeLoadScreenEvents();
 end
@@ -928,6 +946,34 @@ end
 function Outfitter_PlayerAlive(pEvent)
 	if not UnitIsDeadOrGhost("player") then
 		gOutfitter_IsDead = false;
+	end
+end
+
+function Outfitter_ProfessionCheck(pEvent)
+	local profession
+	if string.find(arg1, Outfitter_cRequiresSkinning) then
+		profession = "Skinning";
+	elseif string.find(arg1, Outfitter_cRequiresMining) then
+		profession = "Mining";
+	elseif string.find(arg1, Outfitter_cRequiresHerbalism) then
+		profession = "Herbalism";
+	end
+
+	if profession then
+		local vOutfit = Outfitter_FindOutfitByStatID(profession)
+		if vOutfit and vOutfit.AutoEquip then
+			gOutfitter_CurrentProfessionOutfit = vOutfit;
+			Outfitter_WearOutfit(gOutfitter_CurrentProfessionOutfit);
+		end
+	end
+end
+
+function Outfitter_ProfessionUnequip(pEvent)
+	if gOutfitter_CurrentProfessionOutfit then
+		if gOutfitter_CurrentProfessionOutfit.AutoUnEquip and Outfitter_WearingOutfit(gOutfitter_CurrentProfessionOutfit) then
+			Outfitter_RemoveOutfit(gOutfitter_CurrentProfessionOutfit);
+		end
+		gOutfitter_CurrentProfessionOutfit = nil;
 	end
 end
 
@@ -1352,7 +1398,12 @@ function OutfitterItemDropDown_Initialize()
 		end
 
 		Outfitter_AddMenuItem(vFrame, Outfitter_cUpdateToCurrent, "UPDATE");
-		
+
+		if vOutfit.StatID == "Mining" or vOutfit.StatID == "Skinning" or vOutfit.StatID == "Herbalism" then
+			Outfitter_AddMenuItem(vFrame, Outfitter_cAutoEquip, "AUTOEQUIP", vOutfit.AutoEquip);
+			Outfitter_AddMenuItem(vFrame, Outfitter_cAutoUnEquip, "AUTOUNEQUIP", vOutfit.AutoUnEquip);
+		end
+
 		Outfitter_AddCategoryMenuItem(Outfitter_cBankCategoryTitle);
 		Outfitter_AddMenuItem(vFrame, Outfitter_cDepositToBank, "DEPOSIT", nil, nil, nil, not gOutfitter_BankFrameOpened);
 		Outfitter_AddMenuItem(vFrame, Outfitter_cDepositUniqueToBank, "DEPOSITUNIQUE", nil, nil, nil, not gOutfitter_BankFrameOpened);
@@ -1417,9 +1468,12 @@ function Outfitter_SetHideDisabledOutfits(pHideDisabledOutfits)
 	Outfitter_Update(false);
 end
 
-function OutfitterMinimapDropDown_OnLoad()
-	UIDropDownMenu_SetAnchor(3, -7, this, "TOPRIGHT", this:GetName(), "TOPLEFT");
-	UIDropDownMenu_Initialize(this, OutfitterMinimapDropDown_Initialize);
+function OutfitterMinimapDropDown_OnLoad(dropdown)
+	if ( not dropdown ) then
+		dropdown = this;
+	end
+	UIDropDownMenu_SetAnchor(3, -7, dropdown, "TOPRIGHT", this:GetName(), "TOPLEFT");
+	UIDropDownMenu_Initialize(dropdown, OutfitterMinimapDropDown_Initialize);
 	--UIDropDownMenu_Refresh(this); -- Don't refresh on menus which don't have a text portion
 
 	Outfitter_RegisterOutfitEvent("WEAR_OUTFIT", OutfitterMinimapDropDown_OutfitEvent);
@@ -4918,6 +4972,18 @@ function Outfitter_OutfitItemSelected(pMenu, pValue)
 		Outfitter_DepositOutfit(vOutfit, true);
 	elseif pValue == "WITHDRAW" then
 		Outfitter_WithdrawOutfit(vOutfit);
+	elseif pValue == "AUTOEQUIP" then
+		if vOutfit.AutoEquip then
+			vOutfit.AutoEquip = nil;
+		else
+			vOutfit.AutoEquip = true;
+		end
+	elseif pValue == "AUTOUNEQUIP" then
+		if vOutfit.AutoUnEquip then
+			vOutfit.AutoUnEquip = nil;
+		else
+			vOutfit.AutoUnEquip = true;
+		end
 	end
 
 	Outfitter_Update(true);
@@ -6780,4 +6846,95 @@ function Outfitter_TestAmmoSlot()
 	Outfitter_TestMessage("ItemLink: " .. vItemLink);
 
 	Outfitter_DumpArray("vItemInfo", vItemInfo);
+end
+
+function Outfitter_pfUISkin()
+	if IsAddOnLoaded( "pfUI" ) and pfUI and pfUI.api and pfUI.env and pfUI.env.C then
+		pfUI:RegisterSkin( "Outfitter", "vanilla", function()
+			OutfitterButton:SetPoint( "TOPRIGHT", -28, -40 )
+
+			pfUI.api.StripTextures( OutfitterFrame )
+			pfUI.api.CreateBackdrop( OutfitterFrame, nil, nil, .75 )
+			pfUI.api.CreateBackdropShadow( OutfitterFrame )			
+			OutfitterFrame:SetPoint( "TOPLEFT", OutfitterButtonFrame, "TOPRIGHT", -28, -40 )
+			OutfitterFrameTitle:SetPoint( "TOP", 0, -6 )
+			OutfitterMainFrameButtonBarBackground:SetTexture( nil )
+
+			pfUI.api.SkinCloseButton( OutfitterCloseButton )
+			OutfitterCloseButton:SetPoint( "TOPRIGHT", -4, -4 )
+
+			pfUI.api.SkinButton( OutfitterNewButton )
+			OutfitterNewButton:SetPoint( "BOTTOMRIGHT", -9, 4 )
+
+			pfUI.api.SkinButton( OutfitterEnableAll )
+			OutfitterEnableAll:SetPoint("TOP", -73, -80)
+
+			pfUI.api.SkinButton( OutfitterEnableNone )
+			OutfitterEnableNone:SetPoint("TOP", 18, -80)
+
+			pfUI.api.StripTextures( OutfitterMainFrameScrollbarTrench )			
+			pfUI.api.SkinScrollbar( OutfitterMainFrameScrollFrameScrollBar )
+
+			pfUI.api.SkinTab( OutfitterFrameTab1 )
+			OutfitterFrameTab1:ClearAllPoints()
+			OutfitterFrameTab1:SetPoint( "TOPRIGHT", OutfitterFrame, "BOTTOMRIGHT", 0, -6 )
+			pfUI.api.SkinTab( OutfitterFrameTab2 )
+			OutfitterFrameTab2:ClearAllPoints()
+			OutfitterFrameTab2:SetPoint( "TOPRIGHT", OutfitterFrameTab1, "TOPLEFT", -6, 0 )
+			pfUI.api.SkinTab( OutfitterFrameTab3 )
+			OutfitterFrameTab3:ClearAllPoints()
+			OutfitterFrameTab3:SetPoint( "TOPRIGHT", OutfitterFrameTab2, "TOPLEFT", -6, 0 )
+
+			pfUI.api.StripTextures( OutfitterNameOutfitDialog )
+			pfUI.api.CreateBackdrop( OutfitterNameOutfitDialog )
+			OutfitterNameOutfitDialogTitle:SetPoint( "TOP", 0, -8 )
+
+			pfUI.api.StripTextures( OutfitterNameOutfitDialogName, true, "BACKGROUND" )
+			pfUI.api.CreateBackdrop( OutfitterNameOutfitDialogName )
+			OutfitterNameOutfitDialogName:SetWidth( 165 )
+
+			pfUI.api.SkinDropDown( OutfitterNameOutfitDialogCreateUsing )
+			OutfitterNameOutfitDialogCreateUsing:SetPoint( "TOPLEFT", OutfitterNameOutfitDialogName, "TOPLEFT", -17, -30 )
+			OutfitterNameOutfitDialogCreateUsingTitle:SetPoint( "RIGHT", OutfitterNameOutfitDialogCreateUsing, "LEFT", 5, 0)
+
+			pfUI.api.SkinButton( OutfitterNameOutfitDialogDoneButton )
+			pfUI.api.SkinButton( OutfitterNameOutfitDialogCancelButton )
+
+			pfUI.api.StripTextures( OutfitterCurrentOutfit )
+			pfUI.api.CreateBackdrop( OutfitterCurrentOutfit )
+			OutfitterCurrentOutfit:SetWidth( 140 )
+
+			local function skin_checkbox(cb)
+				pfUI.api.SkinCheckbox( cb )
+				local tex = cb:GetCheckedTexture()
+				tex:ClearAllPoints()
+				tex:SetPoint( "TOPLEFT", 4, -4 )
+				tex:SetPoint( "BOTTOMRIGHT", -4, 4 )				
+			end
+
+			for i = 0, 13 do
+				local m = getglobal( "OutfitterItem" .. i .. "OutfitMenu")
+				pfUI.api.SkinArrowButton( m, "down" )
+
+				local cb = getglobal( "OutfitterItem" .. i .. "OutfitSelected")
+				skin_checkbox( cb )
+
+				local c = getglobal( "OutfitterItem" .. i .. "CategoryExpand")
+				pfUI.api.SkinCollapseButton( c )
+				c.icon.backdrop:SetPoint("TOPLEFT", -2, 1 )
+				c.icon.backdrop:SetPoint("BOTTOMRIGHT", 1, -2 )
+			end
+
+			OutfitterShowMinimapButton:SetPoint( "TOPLEFT", 15, -90 )
+			for _, v in { "ShowMinimapButton", "RememberVisibility", "ShowHotkeyMessages", "ShowCurrentOutfit", "HideDisabledOutfits" } do
+				local cb = getglobal( "Outfitter" .. v )
+				skin_checkbox( cb )
+			end
+
+			for _, v in { "Head", "Neck", "Shoulder", "Back", "Chest", "Shirt", "Tabard", "Wrist", "Hands", "Waist", "Legs", "Feet", "Finger0", "Finger1", "Trinket0", "Trinket1", "MainHand", "SecondaryHand", "Ranged", "Ammo" } do
+				local cb = getglobal( "OutfitterEnable" .. v .. "Slot")
+				skin_checkbox( cb )
+			end
+		end )
+	end
 end
