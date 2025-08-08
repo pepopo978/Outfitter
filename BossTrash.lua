@@ -31,4 +31,7 @@ gBossTrashNames = {
 	["Soldier of the Frozen Wastes"] = true,
 	["Soul Weaver"] = true,
 	["Unstoppable Abomination"] = true,
+
+	--KARA40--
+	["Draenei Truthseeker"] = true,
 }
