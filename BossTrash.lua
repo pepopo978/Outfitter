@@ -33,5 +33,11 @@ gBossTrashNames = {
 	["Unstoppable Abomination"] = true,
 
 	--KARA40--
+	["Manascale Ley-Seeker"] = true,
+	["Withering Pawn"] = true,
+	["Desolate Destroyer"] = true,
+	["Desolate Invader"] = true,
+	["Ima'ghaol, Herald of Desolation"] = true,
 	["Draenei Truthseeker"] = true,
+	["Crumbling Exile"] = true,
 }
