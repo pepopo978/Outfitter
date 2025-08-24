@@ -101,7 +101,7 @@ Outfitter_cK40 = "The Rock of Desolation";
 
 Outfitter_cFishingPole = "Fishing Pole";
 Outfitter_cStrongFishingPole = "Strong Fishing Pole";
-utfitter_cDarkwoodFishingPole = "Darkwood Fishing Pole";
+Outfitter_cDarkwoodFishingPole = "Darkwood Fishing Pole";
 Outfitter_cBigIronFishingPole = "Big Iron Fishing Pole";
 Outfitter_cBlumpFishingPole = "Blump Family Fishing Pole";
 Outfitter_cNatPaglesFishingPole = "Nat Pagle's Extreme Angler FC-5000";
@@ -395,3 +395,9 @@ Outfitter_cTradeCategory = "Trade Skills";
 
 Outfitter_cTankPoints = "TankPoints";
 Outfitter_cCustom = "Custom";
+
+Outfitter_cRequiresHerbalism = "Requires Herbalism";
+Outfitter_cRequiresSkinning = "Requires Skinning";
+Outfitter_cRequiresMining = "Requires Mining";
+Outfitter_cAutoEquip = "Auto equip";
+Outfitter_cAutoUnEquip = "Auto unequip";
