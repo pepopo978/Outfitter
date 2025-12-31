@@ -756,6 +756,8 @@ function Outfitter_OnLoad()
 
 	SLASH_OUTFITTER1 = "/outfitter";
 
+	gOutfitter_CurrentZone = GetZoneText();
+	
 	-- Fake a leaving world event to suspend inventory/bag
 	-- updating until loading is completed
 
