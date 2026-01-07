@@ -53,6 +53,9 @@ Outfitter_cBeastTrashOutfit = "Beast Trash Mobs";
 Outfitter_cUndeadTrashOutfit = "Undead Trash Mobs";
 Outfitter_cDemonTrashOutfit = "Demon Trash Mobs";
 
+Outfitter_cNonCombatOutfit = "Non-Combat";
+
+
 Outfitter_cMountSpeedFormat = "Increases speed by (%d+)%%."; -- For detecting when mounted
 
 Outfitter_cBagsFullError = "Outfitter: Can't remove %s because all bags are full";
@@ -244,6 +247,7 @@ Outfitter_cShowHotkeyMessagesOnDescription = "Turn this off if you don't want to
 Outfitter_cShowHotkeyMessagesOffDescription = "Turn this on if you want to see a message when you change outfits using a key binding";
 Outfitter_cShowCurrentOutfit = "Display current outfit in small window";
 Outfitter_cHideDisabledOutfits = "Hide disabled outfits from list";
+Outfitter_cKeepScanningBuffsEvenInCombat = "Scan buffs even in-combat (laggy!)";
 
 Outfitter_cEquipOutfitMessageFormat = "Outfitter: %s equipped";
 Outfitter_cUnequipOutfitMessageFormat = "Outfitter: %s unequipped";
@@ -276,6 +280,8 @@ Outfitter_cCritterOutfitDescription = "This outfit will automatically be worn wh
 Outfitter_cBeastTrashOutfitDescription = "This outfit will automatically be worn whenever you target beasts level <63 mobs";
 Outfitter_cUndeadTrashOutfitDescription = "This outfit will automatically be worn whenever you target undead level <63 mobs";
 Outfitter_cDemonTrashOutfitDescription = "This outfit will automatically be worn whenever you target demons level <63 mobs";
+Outfitter_cNonCombatOutfitDescription = "This outfit will automatically be worn whenever you are out of combat.";
+
 
 Outfitter_cKeyBinding = "Key Binding";
 
@@ -324,6 +330,8 @@ Outfitter_cAquaticForm = "Aquatic Form";
 Outfitter_cTravelForm = "Travel Form";
 Outfitter_cDireBearForm = "Dire Bear Form";
 Outfitter_cMoonkinForm = "Moonkin Form";
+Outfitter_cTreeForm = "Tree of Life Form";
+
 
 Outfitter_cGhostWolfForm = "Ghost Wolf";
 
@@ -334,6 +342,7 @@ Outfitter_cDruidCatForm = "Druid: Cat Form";
 Outfitter_cDruidAquaticForm = "Druid: Aquatic Form";
 Outfitter_cDruidTravelForm = "Druid: Travel Form";
 Outfitter_cDruidMoonkinForm = "Druid: Moonkin Form";
+Outfitter_cDruidTreeForm = "Druid: Tree Form";
 
 Outfitter_cPriestShadowform = "Priest: Shadowform";
 
