@@ -60,6 +60,36 @@ local Outfitter_cSlotNames = {
 	"Trinket1Slot",
 };
 
+
+local Outfitter_cSlotNames_NoTrinkets = {
+	-- First priority goes to armor
+
+	"HeadSlot",
+	"ShoulderSlot",
+	"ChestSlot",
+	"WristSlot",
+	"HandsSlot",
+	"WaistSlot",
+	"LegsSlot",
+	"FeetSlot",
+
+	-- Second priority goes to weapons
+
+	"MainHandSlot",
+	"SecondaryHandSlot",
+	"RangedSlot",
+	"AmmoSlot",
+
+	-- Last priority goes to items with no durability
+
+	"BackSlot",
+	"NeckSlot",
+	"ShirtSlot",
+	"TabardSlot",
+	"Finger0Slot",
+	"Finger1Slot",
+};
+
 local Outfitter_cSlotDisplayNames = {
 	HeadSlot = HEADSLOT,
 	NeckSlot = NECKSLOT,
@@ -882,6 +912,11 @@ end
 function Outfitter_BagUpdate()
 	local vBagIndex = arg1;
 
+	-- debounce the event to avoid doing the same logic many times when swapping sets
+	AceEvent:ScheduleEvent("OutfitterBagUpdate", Outfitter_BagUpdate2, 0.3, vBagIndex)
+end
+
+function Outfitter_BagUpdate2(vBagIndex)
 	OutfitterItemList_FlushBagFromEquippableItems(vBagIndex);
 
 	-- This is a messy hack to ensure the database gets updated properly
@@ -1154,7 +1189,7 @@ function Outfitter_InventoryChanged(pEvent)
 	end
 
 	-- debounce the event to avoid doing the same logic many times when swapping sets
-	AceEvent:ScheduleEvent("OutfitterUnitInventoryChanged", Outfitter_InventoryChanged2, 0.5)
+	AceEvent:ScheduleEvent("OutfitterUnitInventoryChanged", Outfitter_InventoryChanged2, 0.3)
 end
 
 function Outfitter_InventoryChanged2()
@@ -4329,7 +4364,7 @@ function Outfitter_SetAllSlotEnables(pEnable)
 end
 
 function Outfitter_OutfitIsComplete(pOutfit, pIgnoreAmmoSlot)
-	for _, vInventorySlot in Outfitter_cSlotNames do
+	for _, vInventorySlot in Outfitter_cSlotNames_NoTrinkets do
 		if not pOutfit.Items[vInventorySlot]
 				and (not pIgnoreAmmoSlot or vInventorySlot ~= "AmmoSlot") then
 			return false;
