@@ -327,6 +327,7 @@ local Outfitter_cClassSpecialOutfits = {
 		{ Name = Outfitter_cDruidAquaticForm, SpecialID = "Aquatic" },
 		{ Name = Outfitter_cDruidTravelForm, SpecialID = "Travel" },
 		{ Name = Outfitter_cDruidMoonkinForm, SpecialID = "Moonkin" },
+		{ Name = Outfitter_cDruidTreeForm, SpecialID = "Tree" },
 	},
 
 	Priest = {
@@ -393,6 +394,7 @@ local Outfitter_cSpecialOutfitDescriptions = {
 	BeastTrash = Outfitter_cBeastTrashOutfitDescription,
 	UndeadTrash = Outfitter_cUndeadTrashOutfitDescription,
 	DemonTrash = Outfitter_cDemonTrashOutfitDescription,
+	NonCombat = Outfitter_cNonCombatOutfitDescription,
 };
 
 -- Note that zone special outfits will be worn in the order
@@ -543,7 +545,7 @@ local gOutfitter_EquippableItems = nil;
 local gOutfitter_Initialized = false;
 local gOutfitter_Suspended = false;
 
-local gOutfitter_CurrentTarget = UnitName("target");
+local gOutfitter_CurrentTarget = nil; -- Will be initialized properly on first target change
 
 local Outfitter_cMaxDisplayedItems = 14;
 
@@ -570,6 +572,7 @@ local Outfitter_cShapeshiftSpecialIDs = {
 	[Outfitter_cTravelForm] = { ID = "Travel" },
 	[Outfitter_cDireBearForm] = { ID = "Bear" },
 	[Outfitter_cMoonkinForm] = { ID = "Moonkin" },
+	[Outfitter_cTreeForm] = { ID = "Tree" },
 
 	-- Rogues
 
@@ -663,21 +666,33 @@ end
 
 local currentOutfitFrame = Outfitter_CreateCurrentOutfitFrame();
 
+-- Cache table for building outfit names to avoid string allocation
+local gOutfitter_EquippedNamesCache = {};
+
 local function Outfitter_UpdateCurrentOutfit()
 	if gOutfitter_Settings.Options.ShowCurrentOutfit then
-		local equippedNames = "";
+		-- Clear the cache table instead of creating new strings
+		for k in pairs(gOutfitter_EquippedNamesCache) do
+			gOutfitter_EquippedNamesCache[k] = nil;
+		end
+
+		local numOutfits = 0;
 		for vCategoryID, vOutfits in gOutfitter_Settings.Outfits do
 			for vIndex, vOutfit in vOutfits do
 				if Outfitter_WearingOutfit(vOutfit) then
-					if equippedNames ~= "" then
-						equippedNames = vOutfit.Name .. ", " .. equippedNames;
-					else
-						equippedNames = vOutfit.Name;
-					end
+					numOutfits = numOutfits + 1;
+					gOutfitter_EquippedNamesCache[numOutfits] = vOutfit.Name;
 				end
 			end
 		end
-		currentOutfitFrame.equippedOutfits:SetText(equippedNames)
+
+		local equippedNames;
+		if numOutfits > 0 then
+			equippedNames = table.concat(gOutfitter_EquippedNamesCache, ", ");
+		else
+			equippedNames = "";
+		end
+		currentOutfitFrame.equippedOutfits:SetText(equippedNames);
 	end
 end
 
@@ -705,6 +720,7 @@ function Outfitter_OnLoad()
 	-- For monitoring plaguelands and battlegrounds
 
 	Outfitter_RegisterEvent(this, "ZONE_CHANGED_NEW_AREA", Outfitter_UpdateZone);
+	gOutfitter_CurrentZone = GetZoneText();
 
 	-- For monitoring player combat state
 
@@ -801,6 +817,16 @@ function Outfitter_PlayerLeavingWorld()
 
 	gOutfitter_Suspended = true;
 
+	-- Cancel any pending scheduled events to prevent memory leaks
+	if AceEvent and AceEvent.IsEventScheduled then
+		if AceEvent:IsEventScheduled("OutfitterDelayedTargetChange") then
+			AceEvent:CancelScheduledEvent("OutfitterDelayedTargetChange");
+		end
+		if AceEvent:IsEventScheduled("OutfitterUnitInventoryChanged") then
+			AceEvent:CancelScheduledEvent("OutfitterUnitInventoryChanged");
+		end
+	end
+
 	Outfitter_SuspendEvent(OutfitterFrame, "BAG_UPDATE");
 	Outfitter_SuspendEvent(OutfitterFrame, "UNIT_INVENTORY_CHANGED");
 	Outfitter_SuspendEvent(OutfitterFrame, "UPDATE_INVENTORY_ALERTS");
@@ -810,6 +836,7 @@ function Outfitter_PlayerLeavingWorld()
 end
 
 function Outfitter_PlayerEnteringWorld()
+	Outfitter_UpdateZone();
 	OutfitterItemList_FlushEquippableItems();
 
 	-- Clear BOE cache on login/reload
@@ -975,10 +1002,20 @@ end
 
 function Outfitter_RegenEnabled(pEvent)
 	gOutfitter_InCombat = false;
+
+	-- Check if any shapeshift outfit is active for any class
+	for _, specialIDInfo in pairs(Outfitter_cShapeshiftSpecialIDs) do
+		if gOutfitter_SpecialState[specialIDInfo.ID] then
+			return; -- A shapeshift form is active, so don't apply the NonCombat outfit
+		end
+	end
+
+	Outfitter_SetSpecialOutfitEnabled("NonCombat", true);
 end
 
 function Outfitter_RegenDisabled(pEvent)
 	gOutfitter_InCombat = true;
+	Outfitter_SetSpecialOutfitEnabled("NonCombat", false);
 end
 
 function Outfitter_PlayerDead(pEvent)
@@ -1050,6 +1087,10 @@ function Outfitter_UnitHealthOrManaChanged()
 end
 
 function Outfitter_TargetChanged()
+	-- Cancel any pending event to avoid accumulation
+	if AceEvent:IsEventScheduled("OutfitterDelayedTargetChange") then
+		AceEvent:CancelScheduledEvent("OutfitterDelayedTargetChange");
+	end
 	-- Delay the event to avoid triggering when addons briefly change targets
 	AceEvent:ScheduleEvent("OutfitterDelayedTargetChange", Outfitter_TargetChangedDelayedEvent, 0.1);
 end
@@ -1057,7 +1098,11 @@ end
 function Outfitter_TargetChangedDelayedEvent()
 	local newTarget = UnitName("target");
 	-- check if target actually changed
-	if newTarget == gOutfitter_CurrentTarget or UnitIsDead("target") then
+	if newTarget == gOutfitter_CurrentTarget then
+		return ;
+	end
+	-- Check if target exists and is dead
+	if newTarget and UnitIsDead("target") then
 		return ;
 	end
 
@@ -3346,11 +3391,7 @@ function Outfitter_UpdateEquippedItems()
 	local vEquipmentChangeList = Outfitter_BuildEquipmentChangeList(vCompiledOutfit, vEquippableItems);
 
 	if vEquipmentChangeList then
-		-- local	vExpectedEquippableItems = OutfitterItemList_New();
-
-		Outfitter_ExecuteEquipmentChangeList(vEquipmentChangeList, Outfitter_GetEmptyBagSlotList(), vExpectedEquippableItems);
-
-		-- Outfitter_DumpArray("ExpectedEquippableItems", vExpectedEquippableItems);
+		Outfitter_ExecuteEquipmentChangeList(vEquipmentChangeList, Outfitter_GetEmptyBagSlotList(), nil);
 	end
 
 	-- Update the outfit we're expecting to see on the player
@@ -3996,23 +4037,44 @@ function Outfitter_GetSpecialOutfit(pSpecialID)
 	return nil;
 end
 
+-- Cache table to avoid memory allocations on each call
+local gOutfitter_AuraStatesCache = {
+	Dining = false,
+	Shadowform = false,
+	Riding = false,
+	GhostWolf = false,
+	Feigning = false,
+	Evocate = false,
+	Monkey = false,
+	Hawk = false,
+	Cheetah = false,
+	Pack = false,
+	Beast = false,
+	Wild = false
+};
+
+local function Outfitter_ResetAuraStatesCache()
+	gOutfitter_AuraStatesCache.Dining = false;
+	gOutfitter_AuraStatesCache.Shadowform = false;
+	gOutfitter_AuraStatesCache.Riding = false;
+	gOutfitter_AuraStatesCache.GhostWolf = false;
+	gOutfitter_AuraStatesCache.Feigning = false;
+	gOutfitter_AuraStatesCache.Evocate = false;
+	gOutfitter_AuraStatesCache.Monkey = false;
+	gOutfitter_AuraStatesCache.Hawk = false;
+	gOutfitter_AuraStatesCache.Cheetah = false;
+	gOutfitter_AuraStatesCache.Pack = false;
+	gOutfitter_AuraStatesCache.Beast = false;
+	gOutfitter_AuraStatesCache.Wild = false;
+end
+
 function Outfitter_GetPlayerAuraStates()
-	local vAuraStates = {
-		Dining = false,
-		Shadowform = false,
-		Riding = false,
-		GhostWolf = false,
-		Feigning = false,
-		Evocate = false,
-		Monkey = false,
-		Hawk = false,
-		Cheetah = false,
-		Pack = false,
-		Beast = false,
-		Wild = false
-	};
+	-- Reuse cached table to avoid memory allocations
+	Outfitter_ResetAuraStatesCache();
+	local vAuraStates = gOutfitter_AuraStatesCache;
 
 	local vBuffIndex = 1;
+	local vTexture;
 
 	while true do
 		vTexture = UnitBuff("player", vBuffIndex);
@@ -4108,12 +4170,17 @@ end
 
 function Outfitter_UpdateShapeshiftState()
 	local vNumForms = GetNumShapeshiftForms();
+	local isAnyFormActive = false;
 
 	for vIndex = 1, vNumForms do
 		local vTexture, vName, vIsActive, vIsCastable = GetShapeshiftFormInfo(vIndex);
 		local vSpecialID = Outfitter_cShapeshiftSpecialIDs[vName];
 
 		if vSpecialID then
+			if vIsActive then
+				isAnyFormActive = true;
+			end
+
 			if not vIsActive then
 				vIsActive = false;
 			end
@@ -4128,6 +4195,12 @@ function Outfitter_UpdateShapeshiftState()
 			end
 		end
 	end
+
+	if not isAnyFormActive and not gOutfitter_InCombat then
+		Outfitter_SetSpecialOutfitEnabled("NonCombat", true);
+	else
+		Outfitter_SetSpecialOutfitEnabled("NonCombat", false);
+	end
 end
 
 function Outfitter_SetSpecialOutfitEnabled(pSpecialID, pEnable)
@@ -4137,12 +4210,12 @@ function Outfitter_SetSpecialOutfitEnabled(pSpecialID, pEnable)
 			or vOutfit.Disabled
 			or (pEnable and vOutfit.BGDisabled and Outfitter_InBattlegroundZone())
 			or (pEnable and vOutfit.InstDisabled and Outfitter_InInstanceZone()) then
-		return ;
+		return;
 	end
 
 	if pEnable then
-		-- Start monitoring health and mana if it's the dining outfit
 
+		-- Start monitoring health and mana if it's the dining outfit
 		if pSpecialID == "Dining" then
 			Outfitter_ResumeEvent(OutfitterFrame, "UNIT_HEALTH");
 			Outfitter_ResumeEvent(OutfitterFrame, "UNIT_MANA");
@@ -4160,6 +4233,8 @@ function Outfitter_SetSpecialOutfitEnabled(pSpecialID, pEnable)
 
 		if pSpecialID == "ArgentDawn" then
 			vWearBelowOutfit = Outfitter_GetSpecialOutfit("Riding");
+		elseif pSpecialID == "NonCombat" then
+			vWearBelowOutfit = Outfitter_GetSpecialOutfit("Dining");
 		end
 
 		--
@@ -4503,6 +4578,7 @@ function Outfitter_Initialize()
 	-- Make sure the outfit state is good
 
 	Outfitter_SetSpecialOutfitEnabled("Riding", false);
+	Outfitter_SetSpecialOutfitEnabled("NonCombat", false);
 	Outfitter_SetSpecialOutfitEnabled("Spirit", false);
 	Outfitter_UpdateAuraStates();
 
@@ -4607,6 +4683,15 @@ function Outfitter_InitializeSpecialOccassionOutfits()
 	-- Create the city outfit
 
 	Outfitter_CreateEmptySpecialOccassionOutfit("City", Outfitter_cCityOutfit);
+
+	-- Create the NonCombat outfit
+	vOutfit = Outfitter_GetSpecialOutfit("NonCombat");
+	if not vOutfit then
+		Outfitter_CreateEmptySpecialOccassionOutfit("NonCombat", Outfitter_cNonCombatOutfit);
+		vOutfit = Outfitter_GetSpecialOutfit("NonCombat");
+		vOutfit.BGDisabled = true;
+		vOutfit.InstDisabled = true;
+	end
 
 	-- Create class-specific outfits
 
@@ -6507,7 +6592,7 @@ function Outfitter_DepositOutfit(pOutfit, pUniqueItemsOnly)
 
 	-- Execute the changes
 
-	Outfitter_ExecuteEquipmentChangeList2(vEquipmentChangeList, vEmptyBankSlots, Outfitter_cDepositBagsFullError, vExpectedEquippableItems);
+	Outfitter_ExecuteEquipmentChangeList2(vEquipmentChangeList, vEmptyBankSlots, Outfitter_cDepositBagsFullError, nil);
 end
 
 function Outfitter_WithdrawOutfit(pOutfit)
@@ -6545,7 +6630,7 @@ function Outfitter_WithdrawOutfit(pOutfit)
 
 	-- Execute the changes
 
-	Outfitter_ExecuteEquipmentChangeList2(vEquipmentChangeList, vEmptyBagSlots, Outfitter_cWithdrawBagsFullError, vExpectedEquippableItems);
+	Outfitter_ExecuteEquipmentChangeList2(vEquipmentChangeList, vEmptyBagSlots, Outfitter_cWithdrawBagsFullError, nil);
 end
 
 function Outfitter_TestOutfitCombinations()
@@ -6920,8 +7005,8 @@ function Outfitter_TestAmmoSlot()
 	local vSlotID = GetInventorySlotInfo("AmmoSlot");
 	local vItemLink = GetInventoryItemLink("player", vSlotID);
 
-	Outfitter_TestMessage("SlotID: " .. vSlotID);
-	Outfitter_TestMessage("ItemLink: " .. vItemLink);
+	Outfitter_TestMessage("SlotID: " .. (vSlotID or "nil"));
+	Outfitter_TestMessage("ItemLink: " .. (vItemLink or "nil"));
 
 	Outfitter_DumpArray("vItemInfo", vItemInfo);
 end
