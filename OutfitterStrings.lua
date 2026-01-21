@@ -53,6 +53,9 @@ Outfitter_cBeastTrashOutfit = "Beast Trash Mobs";
 Outfitter_cUndeadTrashOutfit = "Undead Trash Mobs";
 Outfitter_cDemonTrashOutfit = "Demon Trash Mobs";
 
+Outfitter_cNonCombatOutfit = "Non-Combat";
+
+
 Outfitter_cMountSpeedFormat = "Increases speed by (%d+)%%."; -- For detecting when mounted
 
 Outfitter_cBagsFullError = "Outfitter: Can't remove %s because all bags are full";
@@ -276,6 +279,8 @@ Outfitter_cCritterOutfitDescription = "This outfit will automatically be worn wh
 Outfitter_cBeastTrashOutfitDescription = "This outfit will automatically be worn whenever you target beasts level <63 mobs";
 Outfitter_cUndeadTrashOutfitDescription = "This outfit will automatically be worn whenever you target undead level <63 mobs";
 Outfitter_cDemonTrashOutfitDescription = "This outfit will automatically be worn whenever you target demons level <63 mobs";
+Outfitter_cNonCombatOutfitDescription = "This outfit will automatically be worn whenever you are out of combat.";
+
 
 Outfitter_cKeyBinding = "Key Binding";
 
