@@ -327,6 +327,7 @@ local Outfitter_cClassSpecialOutfits = {
 		{ Name = Outfitter_cDruidAquaticForm, SpecialID = "Aquatic" },
 		{ Name = Outfitter_cDruidTravelForm, SpecialID = "Travel" },
 		{ Name = Outfitter_cDruidMoonkinForm, SpecialID = "Moonkin" },
+		{ Name = Outfitter_cDruidTreeForm, SpecialID = "Tree" },
 	},
 
 	Priest = {
@@ -570,6 +571,7 @@ local Outfitter_cShapeshiftSpecialIDs = {
 	[Outfitter_cTravelForm] = { ID = "Travel" },
 	[Outfitter_cDireBearForm] = { ID = "Bear" },
 	[Outfitter_cMoonkinForm] = { ID = "Moonkin" },
+	[Outfitter_cTreeForm] = { ID = "Tree" },
 
 	-- Rogues
 

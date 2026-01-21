@@ -324,6 +324,8 @@ Outfitter_cAquaticForm = "Aquatic Form";
 Outfitter_cTravelForm = "Travel Form";
 Outfitter_cDireBearForm = "Dire Bear Form";
 Outfitter_cMoonkinForm = "Moonkin Form";
+Outfitter_cTreeForm = "Tree of Life Form";
+
 
 Outfitter_cGhostWolfForm = "Ghost Wolf";
 
@@ -334,6 +336,7 @@ Outfitter_cDruidCatForm = "Druid: Cat Form";
 Outfitter_cDruidAquaticForm = "Druid: Aquatic Form";
 Outfitter_cDruidTravelForm = "Druid: Travel Form";
 Outfitter_cDruidMoonkinForm = "Druid: Moonkin Form";
+Outfitter_cDruidTreeForm = "Druid: Tree Form";
 
 Outfitter_cPriestShadowform = "Priest: Shadowform";
 
