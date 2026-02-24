@@ -579,7 +579,7 @@
 								<Anchors>
 									<Anchor point="TOPLEFT">
 										<Offset>
-											<AbsDimension x="15" y="-120"/>
+											<AbsDimension x="15" y="-80"/>
 										</Offset>
 									</Anchor>
 								</Anchors>
@@ -688,6 +688,29 @@
 									<OnClick>
 										Outfitter_SetHideDisabledOutfits(this:GetChecked());
 									</OnClick>
+								</Scripts>
+							</CheckButton>
+							<CheckButton name="OutfitterWeaponSwapRetry" inherits="OptionsCheckButtonTemplate">
+								<Anchors>
+									<Anchor point="TOPLEFT" relativeTo="OutfitterHideDisabledOutfits" relativePoint="BOTTOMLEFT">
+										<Offset>
+											<AbsDimension x="0" y="-10"/>
+										</Offset>
+									</Anchor>
+								</Anchors>
+								<Scripts>
+									<OnLoad>
+										getglobal(this:GetName().."Text"):SetText(Outfitter_cWeaponSwapRetry);
+									</OnLoad>
+									<OnClick>
+										Outfitter_SetWeaponSwapRetry(this:GetChecked());
+									</OnClick>
+									<OnEnter>
+										GameTooltip_AddNewbieTip(Outfitter_cWeaponSwapRetry, 1.0, 1.0, 1.0, Outfitter_cWeaponSwapRetryDescription, 1);
+									</OnEnter>
+									<OnLeave>
+										GameTooltip:Hide();
+									</OnLeave>
 								</Scripts>
 							</CheckButton>
 						</Frames>

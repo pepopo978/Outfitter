@@ -534,6 +534,10 @@ local gOutfitter_WeaponsNeedUpdate = false;
 local gOutfitter_LastEquipmentUpdateTime = 0;
 local Outfitter_cMinEquipmentUpdateInterval = 1.5;
 
+local gOutfitter_CombatWeaponRetryCount = 0;
+local Outfitter_cMaxCombatWeaponRetries = 5; -- max retries before giving up
+local Outfitter_cCombatWeaponRetryInterval = 1.6; -- minimum interval between combat weapon swap attempts (matches GCD with grace)
+
 local gOutfitter_CurrentOutfit = nil;
 local gOutfitter_ExpectedOutfit = nil;
 local gOutfitter_CurrentInventoryOutfit = nil;
@@ -975,6 +979,7 @@ end
 
 function Outfitter_RegenEnabled(pEvent)
 	gOutfitter_InCombat = false;
+	gOutfitter_CombatWeaponRetryCount = 0;
 end
 
 function Outfitter_RegenDisabled(pEvent)
@@ -1520,6 +1525,10 @@ function Outfitter_SetHideDisabledOutfits(pHideDisabledOutfits)
 	gOutfitter_Settings.Options.HideDisabledOutfits = pHideDisabledOutfits;
 
 	Outfitter_Update(false);
+end
+
+function Outfitter_SetWeaponSwapRetry(pWeaponSwapRetry)
+	gOutfitter_Settings.Options.WeaponSwapRetry = pWeaponSwapRetry and true or false;
 end
 
 function OutfitterMinimapDropDown_OnLoad(dropdown)
@@ -2174,6 +2183,7 @@ function Outfitter_Update(pUpdateSlotEnables)
 		OutfitterRememberVisibility:SetChecked(not gOutfitter_Settings.Options.DisableAutoVisibility);
 		OutfitterShowHotkeyMessages:SetChecked(not gOutfitter_Settings.Options.DisableHotkeyMessages);
 		OutfitterShowCurrentOutfit:SetChecked(gOutfitter_Settings.Options.ShowCurrentOutfit);
+		OutfitterWeaponSwapRetry:SetChecked(gOutfitter_Settings.Options.WeaponSwapRetry ~= false);
 	end
 end
 
@@ -2559,6 +2569,7 @@ function Outfitter_WearOutfit(pOutfit, pCategoryID, pWearBelowOutfit)
 
 	gOutfitter_EquippedNeedsUpdate = true;
 	gOutfitter_WeaponsNeedUpdate = true;
+	gOutfitter_CombatWeaponRetryCount = 0;
 
 	Outfitter_EndEquipmentUpdate("Outfitter_WearOutfit");
 
@@ -2706,6 +2717,7 @@ function Outfitter_RemoveOutfit(pOutfit)
 
 	gOutfitter_EquippedNeedsUpdate = true;
 	gOutfitter_WeaponsNeedUpdate = true;
+	gOutfitter_CombatWeaponRetryCount = 0;
 
 	Outfitter_EndEquipmentUpdate("Outfitter_RemoveOutfit");
 
@@ -3289,7 +3301,13 @@ function Outfitter_UpdateEquippedItems()
 
 	local vCurrentTime = GetTime();
 
-	if vCurrentTime - gOutfitter_LastEquipmentUpdateTime < Outfitter_cMinEquipmentUpdateInterval then
+	-- In combat with weapon retries pending, use GCD-matched interval
+	local vMinInterval = Outfitter_cMinEquipmentUpdateInterval;
+	if gOutfitter_InCombat and gOutfitter_CombatWeaponRetryCount > 0 then
+		vMinInterval = Outfitter_cCombatWeaponRetryInterval;
+	end
+
+	if vCurrentTime - gOutfitter_LastEquipmentUpdateTime < vMinInterval then
 		OutfitterTimer_AdjustTimer();
 		return ;
 	end
@@ -3313,6 +3331,13 @@ function Outfitter_UpdateEquippedItems()
 	if gOutfitter_InCombat then
 		if vWeaponsNeedUpdate
 				and Outfitter_OutfitHasCombatEquipmentSlots(vCompiledOutfit) then
+
+			-- Check retry limit for combat weapon swaps
+			if gOutfitter_CombatWeaponRetryCount >= Outfitter_cMaxCombatWeaponRetries then
+				-- Give up - too many retries, will retry when combat ends
+				gOutfitter_EquippedNeedsUpdate = true;
+				return;
+			end
 
 			-- Allow the weapon change to proceed but defer the rest
 			-- until they're out of combat
@@ -3346,11 +3371,16 @@ function Outfitter_UpdateEquippedItems()
 	local vEquipmentChangeList = Outfitter_BuildEquipmentChangeList(vCompiledOutfit, vEquippableItems);
 
 	if vEquipmentChangeList then
-		-- local	vExpectedEquippableItems = OutfitterItemList_New();
-
 		Outfitter_ExecuteEquipmentChangeList(vEquipmentChangeList, Outfitter_GetEmptyBagSlotList(), vExpectedEquippableItems);
 
-		-- Outfitter_DumpArray("ExpectedEquippableItems", vExpectedEquippableItems);
+		-- In combat, weapon swaps may fail due to GCD - schedule retry if enabled
+		if gOutfitter_InCombat and gOutfitter_Settings.Options.WeaponSwapRetry then
+			gOutfitter_WeaponsNeedUpdate = true;
+			gOutfitter_CombatWeaponRetryCount = gOutfitter_CombatWeaponRetryCount + 1;
+		end
+	else
+		-- No changes needed - reset combat retry counter
+		gOutfitter_CombatWeaponRetryCount = 0;
 	end
 
 	-- Update the outfit we're expecting to see on the player
@@ -4458,6 +4488,10 @@ function Outfitter_Initialize()
 
 	if not gOutfitter_Settings.HideCloak then
 		gOutfitter_Settings.HideCloak = {};
+	end
+
+	if gOutfitter_Settings.Options.WeaponSwapRetry == nil then
+		gOutfitter_Settings.Options.WeaponSwapRetry = true; -- On by default
 	end
 
 	--

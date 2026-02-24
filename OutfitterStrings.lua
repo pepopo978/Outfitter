@@ -244,6 +244,8 @@ Outfitter_cShowHotkeyMessagesOnDescription = "Turn this off if you don't want to
 Outfitter_cShowHotkeyMessagesOffDescription = "Turn this on if you want to see a message when you change outfits using a key binding";
 Outfitter_cShowCurrentOutfit = "Display current outfit in small window";
 Outfitter_cHideDisabledOutfits = "Hide disabled outfits from list";
+Outfitter_cWeaponSwapRetry = "Retry weapon swaps in combat";
+Outfitter_cWeaponSwapRetryDescription = "When enabled, weapon swaps will be retried during combat if the initial swap fails due to GCD";
 
 Outfitter_cEquipOutfitMessageFormat = "Outfitter: %s equipped";
 Outfitter_cUnequipOutfitMessageFormat = "Outfitter: %s unequipped";
