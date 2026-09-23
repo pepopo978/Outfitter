@@ -5217,7 +5217,7 @@ end
 function OutfitterTimer_AdjustTimer()
 	local vNeedTimer = false;
 
-	if OutfitterMinimapButton.IsDragging then
+	if OutfitterMinimapButton.OutfitterIsDragging then
 		vNeedTimer = true;
 	end
 
@@ -5235,7 +5235,7 @@ function OutfitterTimer_AdjustTimer()
 end
 
 function OutfitterUpdateFrame_OnUpdate(pElapsed)
-	if OutfitterMinimapButton.IsDragging then
+	if OutfitterMinimapButton.OutfitterIsDragging then
 		OutfitterMinimapButton_UpdateDragPosition();
 	end
 
@@ -5272,12 +5272,12 @@ function OutfitterMinimapButton_MouseDown()
 end
 
 function OutfitterMinimapButton_DragStart()
-	OutfitterMinimapButton.IsDragging = true;
+	OutfitterMinimapButton.OutfitterIsDragging = true;
 	OutfitterTimer_AdjustTimer();
 end
 
 function OutfitterMinimapButton_DragEnd()
-	OutfitterMinimapButton.IsDragging = false;
+	OutfitterMinimapButton.OutfitterIsDragging = false;
 	OutfitterTimer_AdjustTimer();
 end
 
